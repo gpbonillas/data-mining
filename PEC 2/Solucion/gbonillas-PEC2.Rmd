@@ -1,0 +1,996 @@
+---
+title: 'Minería de datos: PEC2 - Métodos no supervisados'
+author: "Autor: Gabriel Patricio Bonilla Sanchez"
+date: "Noviembre 2020"
+output:
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+    includes:
+      in_header: 75.584-PEC-header.html
+  word_document: default
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+******
+# Introducción
+******
+## Presentación
+Esta Prueba de Evaluación Continuada cubre principalmente los módulos 5 y 6 (Métodos de agregación y Algoritmos de asociación) del programa de la asignatura.
+
+## Competencias
+Las competencias que se trabajan en esta prueba son:  
+
+* Uso y aplicación de las TIC en el ámbito académico y profesional.
+* Capacidad para innovar y generar nuevas ideas.
+* Capacidad para evaluar soluciones tecnológicas y elaborar propuestas de proyectos teniendo en cuenta los recursos, las alternativas disponibles y las condiciones de mercado.
+* Conocer las tecnologías de comunicaciones actuales y emergentes así como saberlas aplicar convenientemente para diseñar y desarrollar soluciones basadas en sistemas y tecnologías de la información.
+* Aplicación de las técnicas específicas de ingeniería del software en las diferentes etapas del ciclo de vida de un proyecto.
+* Capacidad para aplicar las técnicas específicas de tratamiento, almacenamiento y administración de datos.
+* Capacidad para proponer y evaluar diferentes alternativas tecnológicas para resolver un problema concreto.
+
+## Objetivos
+En esta PEC trabajaremos la generación, interpretación y evaluación de un modelo de agregación y de un modelo donde generaremos reglas de asociación con el software de practicas. No perderemos de vista las fases de preparación de los datos, calidad del modelo y extracción inicial del conocimiento.
+
+## Descripción de la PEC a realizar
+
+## Recursos Básicos
+**Material docente proporcionado por la UOC.** 
+
+Módulo 5 y 6 del material didáctico.
+
+## Criterios de valoración
+
+**Ejercicios teóricos** 
+
+Todos los ejercicios deben ser presentados de forma razonada y clara, especificando todos y cada uno de los pasos que se hayan llevado a cabo para su resolución. No se aceptará ninguna respuesta que no esté claramente justificada.
+
+**Ejercicios prácticos** 
+
+Para todas las PEC es necesario documentar en cada apartado del ejercicio práctico que se ha hecho y cómo se ha hecho.
+
+## Formato y fecha de entrega
+El formato de entrega es: usernameestudiant-PECn.html/doc/docx/odt/pdf  
+Fecha de Entrega: 18/11/2020  
+Se debe entregar la PEC en el buzón de entregas del aula  
+
+## Nota: Propiedad intelectual 
+
+> A menudo es inevitable, al producir una obra multimedia, hacer uso de recursos creados por terceras personas. Es por lo tanto comprensible hacerlo en el marco de una práctica de los estudios de Informática, Multimedia y Telecomunicación de la UOC, siempre y cuando esto se documente claramente y no suponga plagio en la práctica. 
+
+> Por lo tanto, al presentar una práctica que haga uso de recursos ajenos, se debe presentar junto con ella un documento en qué se detallen todos ellos, especificando el nombre de cada recurso, su autor, el lugar dónde se obtuvo y su estatus legal: si la obra está protegida por el copyright o se acoge a alguna otra licencia de uso (Creative Commons, licencia GNU, GPL ...). El estudiante deberá asegurarse de que la licencia no impide específicamente su uso en el marco de la práctica. En caso de no encontrar la información correspondiente tendrá que asumir que la obra está protegida por copyright. 
+
+> Deberéis, además, adjuntar los ficheros originales cuando las obras utilizadas sean digitales, y su código fuente si corresponde.  
+
+******
+# Ejemplo 1.1
+## Métodos de agregación con datos autogenerados
+******
+En este ejemplo vamos a generar un conjunto de muestras aleatorias para posteriormente usar el algoritmo kmeans para agruparlas. Se crearán las muestras alrededor de dos puntos concretos. Por lo tanto, lo lógico será agrupar en dos clústers. Puesto que inicialmente, en un problema real, no se conoce cual es el número más idóneo de clústers k, vamos a probar primero con dos (el valor óptimo) y posteriormente con 4 y 8 clústers. Para evaluar la calidad de cada proceso de agrupación vamos a usar la silueta media. La silueta de cada muestra evalúa como de bien o mal está clasificada la muestra en el clúster al que ha sido asignada. Para ello se usa una fórmula que tiene en cuenta la distancia a las muestras de su clúster y la distancia a las muestras del clúster vecino más cercano. 
+
+A la hora de probar el código que se muestra, es importante tener en cuenta que las muestras se generan de forma aleatoria y también que el algoritmo kmeans tiene una inicialización aleatoria. Por lo tanto, en cada ejecución se obtendrá unos resultados ligeramente diferentes.
+
+Lo primero que hacemos es cargar la librería cluster que contiene las funciones que se necesitan
+
+```{r message= FALSE, warning=FALSE}
+library(cluster)
+```
+Generamos las muestras de forma aleatoria tomando como centro los puntos [0,0] y [5,5].
+```{r message= FALSE, warning=FALSE}
+n <- 150 # número de muestras
+p <- 2   # dimensión
+
+sigma <- 1 # varianza de la distribución
+mean1 <- 0 # centro del primer grupo
+mean2 <- 5 # centro del segundo grupo
+
+n1 <- round(n/2) # número de muestras del primer grupo
+n2 <- round(n/2) # número de muestras del segundo grupo
+
+x1 <- matrix(rnorm(n1*p,mean=mean1,sd=sigma),n1,p)
+x2 <- matrix(rnorm(n2*p,mean=mean2,sd=sigma),n2,p)
+```
+
+Juntamos todas las muestras generadas y las mostramos en una gráfica
+```{r message= FALSE, warning=FALSE}
+x  <- rbind(x1,x2)
+plot (x)
+```
+Como se puede comprobar las muestras están claramente separadas en dos grupos. Si se quiere complicar el problema se puede modificar los puntos centrales (mean1 y mean2) haciendo que estén más próximos y/o ampliar la varianza (sigma) para que las muestras estén más dispersas.
+
+A continuación vamos a aplicar el algoritmo kmeans con 2, 4 y 8 clústers
+```{r message= FALSE, warning=FALSE}
+fit2       <- kmeans(x, 2)
+y_cluster2 <- fit2$cluster
+
+fit4       <- kmeans(x, 4)
+y_cluster4 <- fit4$cluster
+
+fit8       <- kmeans(x, 8)
+y_cluster8 <- fit8$cluster
+```
+Las variables y_cluster2, y_cluster4 e y_cluster8 contienen para cada muestra el identificador del clúster a las que han sido asignadas. Por ejemplo, en el caso de los k=2 las muestras se han asignado al clúster 1 o al 2
+
+```{r message= FALSE, warning=FALSE}
+y_cluster2
+```
+
+Para visualizar los clústers podemos usar la función clusplot. Vemos la agrupación con 2 clústers
+```{r message= FALSE, warning=FALSE}
+clusplot(x, fit2$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
+```
+
+con 4
+```{r message= FALSE, warning=FALSE}
+clusplot(x, fit4$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
+```
+
+y con 8
+```{r message= FALSE, warning=FALSE}
+clusplot(x, fit8$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
+```
+También podemos visualizar el resultado del proceso de agrupamiento con el siguiente código para el caso de 2 clústers
+```{r message= FALSE, warning=FALSE}
+plot(x[y_cluster2==1,],col='blue', xlim=c(min(x[,1]), max(x[,1])), ylim=c(min(x[,2]), max(x[,2])))
+points(x[y_cluster2==2,],col='red')
+```
+
+para 4
+```{r message= FALSE, warning=FALSE}
+
+plot(x[y_cluster4==1,],col='blue', xlim=c(min(x[,1]), max(x[,1])), ylim=c(min(x[,2]), max(x[,2])))
+points(x[y_cluster4==2,],col='red')
+points(x[y_cluster4==3,],col='green')
+points(x[y_cluster4==4,],col='black')
+```
+
+y para 8
+```{r message= FALSE, warning=FALSE}
+plot(x[y_cluster8==1,],col='blue', xlim=c(min(x[,1]), max(x[,1])), ylim=c(min(x[,2]), max(x[,2])))
+points(x[y_cluster8==2,],col='red')
+points(x[y_cluster8==3,],col='green')
+points(x[y_cluster8==4,],col='black')
+points(x[y_cluster8==5,],col='yellow')
+points(x[y_cluster8==6,],col='purple')
+points(x[y_cluster8==7,],col='cyan')
+points(x[y_cluster8==8,],col='orange')
+```
+
+Ahora vamos a evaluar la calidad del proceso de agregación. Para ello usaremos la función silhouette que calcula la silueta de cada muestra
+
+```{r message= FALSE, warning=FALSE}
+d  <- daisy(x) 
+sk2 <- silhouette(y_cluster2, d)
+sk4 <- silhouette(y_cluster4, d)
+sk8 <- silhouette(y_cluster8, d)
+```
+
+La función silhouette devuelve para cada muestra, el clúster dónde ha sido asignado, el clúster vecino y el valor de la silueta. Por lo tanto, calculando la media de la tercera columna podemos obtener una estimación de la calidad del agrupamiento
+
+```{r message= FALSE, warning=FALSE}
+mean(sk2[,3])
+mean(sk4[,3])
+mean(sk8[,3])
+```
+
+Como se puede comprobar, agrupar con dos clúster es mejor que en 4 o en 8, lo cual es lógico teniendo en cuenta como se han generado los datos.
+
+******
+# Ejemplo 1.2
+## Métodos de agregación con datos reales 
+******
+
+A continuación vamos a ver otro ejemplo de cómo se usan los modelos de agregación. Para ello usaremos el fichero iris.csv. Esta base de datos se encuentra descrita en https://archive.ics.uci.edu/ml/datasets/iris. Este dataset está previamente trabajado para que los datos estén limpios y sin errores. De no ser así antes de nada deberíamos buscar errores, valores nulos u outlayers. Deberíamos mirar de discretizar o eliminar columnas. Incluso realizar este último paso varias veces para comprobar los diferentes resultados y elegir el que mejor performance nos dé.
+De todas formas vamos a visualizar la estructura y resumen de los datos
+```{r message= FALSE, warning=FALSE}
+iris_data<-read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data", header=T, sep=",")
+attach(iris_data)
+colnames(iris_data) <- c("sepalLength", "sepalWidth", "petalLength", "petalWidth", "class")
+summary(iris_data)
+```
+
+Como se puede comprobar, esta base de datos está pensada para problemas de clasificación supervisada que pretende clasificar cada tipo de flor en uno de las tres clases existentes (Iris-setosa, Iris-versicolor o Iris-virginica). Como en este ejemplo vamos a usar un método no supervisado, transformaremos el problema supervisado original en uno no supervisado. Para conseguirlo no usaremos la columna class, que es la variable que se quiere predecir. Por lo tanto, intentaremos encontrar agrupaciones usando únicamente los cuatro atributos que caracterizan a cada flor.
+ 
+Cargamos  los datos y nos quedamos únicamente con las cuatro columnas que definen a cada flor
+```{r message= FALSE, warning=FALSE}
+x <- iris_data[,1:4]
+```
+
+Como inicialmente no conocemos el número óptimo de clústers, probamos con varios valores
+```{r message= FALSE, warning=FALSE}
+d <- daisy(x) 
+resultados <- rep(0, 10)
+for (i in c(2,3,4,5,6,7,8,9,10))
+{
+  fit           <- kmeans(x, i)
+  y_cluster     <- fit$cluster
+  sk            <- silhouette(y_cluster, d)
+  resultados[i] <- mean(sk[,3])
+}
+```
+
+
+Mostramos en un gráfica los valores de las siluetas media de cada prueba para comprobar que número de clústers es el mejor
+```{r message= FALSE, warning=FALSE}
+plot(2:10,resultados[2:10],type="o",col="blue",pch=0,xlab="Número de clusters",ylab="Silueta")
+```
+
+Aunque el valor esperado es k=3, dado que el conjunto original tiene 3 clases, el mejor valor que se obtiene es k=2.
+
+Otro forma de evaluar cual es el mejor número de clústers es considerar el mejor modelo, aquel que ofrece la menor suma de los cuadrados de las distancias de los puntos de cada grupo con respecto a su centro (withinss), con la mayor separación entre centros de grupos (betweenss). Como se puede comprobar es una idea conceptualmente similar a la silueta. Una manera común de hacer la selección del número de clústers consiste en aplicar el método elbow (codo), que no es más que la selección del número de clústers en base a la inspección de la gráfica que se obtiene al iterar con el mismo conjunto de datos para distintos valores del número de clústers. Se seleccionará el valor que se encuentra en el "codo" de la curva
+
+```{r message= FALSE, warning=FALSE}
+resultados <- rep(0, 10)
+for (i in c(2,3,4,5,6,7,8,9,10))
+{
+  fit           <- kmeans(x, i)
+  resultados[i] <- fit$tot.withinss
+}
+plot(2:10,resultados[2:10],type="o",col="blue",pch=0,xlab="Número de clusters",ylab="tot.tot.withinss")
+```
+
+En este caso el número óptimo de clústers son 4 que es cuando la curva comienza a estabilizarse.
+
+También se puede usar la función kmeansruns del paquete fpc que ejecuta el algoritmo kmeans con un conjunto de valores, para después seleccionar el valor del número de clústers que mejor funcione de acuerdo a dos criterios: la silueta media ("asw") y Calinski-Harabasz ("ch").
+
+```{r message= FALSE, warning=FALSE}
+library(fpc)
+fit_ch  <- kmeansruns(x, krange = 1:10, criterion = "ch") 
+fit_asw <- kmeansruns(x, krange = 1:10, criterion = "asw") 
+```
+
+Podemos comprobar el valor con el que se ha obtenido el mejor resultado y también mostrar el resultado obtenido para todos los valores de k usando ambos criterios
+
+```{r message= FALSE, warning=FALSE}
+fit_ch$bestk
+fit_asw$bestk
+
+plot(1:10,fit_ch$crit,type="o",col="blue",pch=0,xlab="Número de clústers",ylab="Criterio Calinski-Harabasz")
+plot(1:10,fit_asw$crit,type="o",col="blue",pch=0,xlab="Número de clústers",ylab="Criterio silueta media")
+
+```
+
+Los resultados son muy parecidos a los que hemos obtenido anteriormente. Con el criterio de la silueta media se obtienen dos clústers y con el Calinski-Harabasz se obtienen 3.
+
+Como se ha comprobado, conocer el número óptimo de clústers no es un problema fácil. Tampoco lo es la evaluación de los modelos de agregación.
+
+Como en el caso que estudiamos sabemos que los datos pueden ser agrupados en 3 clases, vamos a ver como se ha comportado el kmeans en el caso de pedirle 3 clústers. Para eso comparamos visualmente los campos dos a dos, con el valor real que sabemos está almacenado en el campo "class" del dataset original.
+```{r message= FALSE, warning=FALSE}
+iris3clusters <- kmeans(x, 3)
+
+# sepalLength y sepalWidth
+plot(x[c(1,2)], col=iris3clusters$cluster)
+plot(x[c(1,2)], col=as.factor(iris_data$class))
+```
+
+Podemos observar que el sépalo no es un buen indicador para diferenciar a las tres subespecies, no con la metodología de kmeans, dado que dos de las subespecies están demasiado mezcladas para poder diferenciar nada.
+```{r message= FALSE, warning=FALSE}
+# petalLength y petalWidth
+plot(x[c(3,4)], col=iris3clusters$cluster)
+plot(x[c(3,4)], col=as.factor(iris_data$class))
+```
+
+El tamaño del pétalo sin embargo, parece hacer un mucho mejor trabajo para dividir las tres clases de flores. El grupo formado por los puntos negros que ha encontrado el algoritmo coincide con los de la flor Iris Setosa. Los otros dos grupos sin embargo se entremezclan algo más, y hay ciertos puntos que se clasifican como Versicolor cuando en realidad son Virginica.
+ 
+Una buena técnica que ayuda a entender los grupos que se han formado, es mirar de darles un nombre. Cómo por ejemplo:
+ 
+ - Grupo 1: Sólo setosas
+ - Grupo 2: Principalmente versicolor
+ - Grupo 3: Virgínicas o iris pétalo grande
+ 
+Esto nos ayuda a entender cómo están formados los grupos y a referirnos a ellos en análisis posteriores.
+ 
+Una última cosa que nos queda por hacer, es saber cuales de las muestras iniciales han sido mal clasificadas y cómo. Eso lo conseguimos con el siguiente comando.
+
+```{r message= FALSE, warning=FALSE}
+table(iris3clusters$cluster,iris_data$class)
+```
+
+Y así, podemos sacar un porcentaje de precisión del modelo
+```{r message= FALSE, warning=FALSE}
+100*(36 + 48 + 49)/(133+(2+14))
+```
+
+## Ejercicio 1.1
+Tomando como punto de partida los ejemplos mostrados, realizar un estudio similar con otro conjunto de datos. Pueden ser datos reales de vuestro ámbito laboral o de algún repositorio de datos de Internet. Mirad por ejemplo: http://www.ics.uci.edu/~mlearn/MLSummary.html.
+
+A la hora de elegir la base de datos ten en cuenta que sea apropiada para problemas no supervisados y que los atributos sean también apropiados para su uso con el algoritmo kmeans.
+
+No hay que olvidarse de la fase de preparación y análisis de datos.
+
+### Respuesta 1.1:
+
+$\color{red}{\text{15% Se explican los campos de la base de datos, preparación y análisis de datos}}$
+
+Para la respuesta de este  ejercicio usaremos el siguienre dataset ubicado en http://archive.ics.uci.edu/ml/datasets/Estimation+of+obesity+levels+based+on+eating+habits+and+physical+condition+. Contiene datos sobre estimaciones de niveles de obesidad en individuos de paises como Colombia, Perú y México, basado en sus hábitos alimenticios y condicion física. 
+
+Este dataset está contiene 17 atributos/variables y 2111 instancias, según el siguiente detalle:
+
+> gender.- Cadena de texto que indica el genero del individuo: Male (Masculino) o Female (Femenino).
+    
+> age.- Valor numérico que indica la edad del individuo. Entre 14 y 61.
+    
+> height.- Valor numérico que indica la altura (en metros) del individuo.
+    
+> weight.- Valor numérico que indica el peso (en kilogramos) del individuo.
+    
+> family_history_with_overweight.- Valor booleano que indica si algún familiar ha sufrido o padece de sobrepeso (SI/NO).
+    
+> FAVC.- Valor booleano que indica si el individuo consume alimentos ricos en calorías (SI/NO).
+    
+> FCVC.- Valor numérico que indica la frecuencia en el consumo de vegetables por el individuo. Entre el 1 (Nunca) al 3 (Siempre).
+    
+> NCP.- Número de comidas principales en el día. Entre 1 a 4.
+    
+> CAEC.- Valor categórico que indica el consumo de alimentos entre comidas principales: No, A veces, Frecuentemente y Siempre.
+    
+> SMOKE.- Valor booleano que indica si el individuo fuma (SI / NO).
+    
+> CH2O.- Valor numérico que indica los litros de agua que el individuo consume. Entre 1 a 3.
+    
+> SCC.- Valor booleano que indica si el individuo monitorea o no su consumo de calorías.
+
+> FAF.- Valor numérico que indica la frecuencia de actividad física. Entre el 0 a 3.
+    
+> TUE.- Valor numérico que indica las horas que el individuo usa dispositivos de tecnología.
+
+> CALC.- Valor categórico que indica la frecuencia de consumo de alcohol por el individuo: No bebo, A veces, Frecuentemente, Siempre.
+    
+> MTRANS.- Valor categórico que indica el método de transporte usado por el individuo: Automovil, Moto, Bicicleta, Transporte Público, Caminando.
+
+> NObeyesdad.- Valor de clase, donde se indica la estimación del nivel de obesidad en el individuo: Bajo peso, normal, Sobre Peso I, Sobre Peso II,  Obesidad I, Obesidad II, Obesidad III. Esta etiqueta para los fines de la PEC no deberá ser tomada en cuenta para el análisis
+    
+Para el fin de la resolución de este ejercicio y el siguiente, solo vamos a usar los atributos: **Age (Edad)**, **Height (Altura)** y **Weight (Peso)**, los cuales corresponden a la edad expresada en años, la altura de la persona en metros y el peso en kilogramos, respectivamente. Además añadiremos una columna más que corresponde al indice de masa corporal calculado a partir del la altura y peso.Esta columna será calculada y se considerará en la etapa de preparación de los datos.
+
+El archivo no contiene datos que deban ser tratados, como nulos o valores desconocidos. Los atributos que corresponden a los hábitos alimenticios y de condición física son categóricos, pero para la siguiente práctica no se los va a convertir ni tomar en cuenta. Para efectos de la práctica los grupos de objetos se clasificarán según los distintos niveles de obesidad, para lo cual necesitamos únicamente la edad, el peso, la altura y el IMC (índice de masa corporal), el cual se calcula a partir de la altura y peso. 
+
+Así mismo, la columna que corresponde a la clase (NObeyesdad) se va a omitir, ya que vamos a querer obtenerla a partir del análisis que hagamos. 
+
+En el siguiente artículo [1] relacionado al dataset, encontramos la descripción de los atributos, las clases que corresponden a los niveles de obesidad y además establece los rangos de la clase NObeyesdad. Para efectos del análisis vamos a considerar el índice de masa corpora óptimo, que se encuentra en el rango [18.5 - 24.9]. Este dato es importante conocerlo, ya que los demás niveles se establecerán tomándolo como referencia. 
+
+Por cultura general sabemos que hay individuos, donde según su índice de masa corporal pueden estar:
+
+* Con un IMC por debajo del valor normal.
+* Con varios niveles más por encima del valor normal.
+
+Para cargar la estructura de datos lo haremos a partir de una archivo CSV, el mismo que se descargó desde http://archive.ics.uci.edu/ml/machine-learning-databases/00544/ObesityDataSet_raw_and_data_sinthetic%20(2).zip y se ha descomprimido en la misma ruta del archivo .Rmd. Cabe indicar que la primera fila del archivo corresponde a los nombres de los atributos. Ahora procedemos a cargar el dataset y ver el resumen de los datos.
+
+
+```{r message= FALSE, warning=FALSE}
+obesity_data_all<-read.csv("ObesityDataSet_raw_and_data_sinthetic.csv", sep=",")
+summary(obesity_data_all)
+```
+
+Como se manifestado anteriormente, este dataset está pensado para problemas de clasificación supervisada que pretende clasificar cada individuo según su nivel de obesidad en uno de los siguientes 6 niveles (bajo peso, normal, sobrepeso, obesidad I, obesidad II, obesidad III). Para esta pregunta vamos a usar un método no supervisado (clustering), por lo cual transformaremos el problema supervisado original en uno no supervisado. Para conseguirlo no usaremos la columna **NObeyesdad**, que es la variable que se quiere predecir. Para lo cual, intentaremos encontrar agrupaciones usando únicamente los dos atributos (Altura y Peso) que son los que intervienen para definir el índice de masa corporal.
+ 
+Cargamos  los datos y nos quedamos únicamente con las columnas 3 (Altura) y 4 (Peso). Además calculamos una tercera columna (mass_body_idx), la cual corresponde al índice de masa corporal, que se calcula según la formula: 
+
+$$ mass\_body\_idx = \frac{peso}{altura * altura} $$
+
+```{r message= FALSE, warning=FALSE}
+data <- obesity_data_all[,2:4]
+data["mass_body_idx"] <- ((data$Weight) / (data$Height * data$Height))
+```
+
+
+$\color{red}{\text{10% Se aplica el algoritmo de agrupamiento de forma correcta}}$
+
+Como inicialmente no conocemos el número óptimo de clústers, probamos con varios valores
+
+```{r message= FALSE, warning=FALSE}
+library(cluster) # cargamos la librería que permite trabajar con las funciones de clustering
+
+d <- daisy(data)
+resultados <- rep(0, 10)
+for (i in c(2,3,4,5,6,7,8,9,10))
+{
+  fit           <- kmeans(data, i)
+  y_cluster     <- fit$cluster
+  sk            <- silhouette(y_cluster, d)
+  resultados[i] <- mean(sk[,3])
+}
+```
+
+Mostramos en un gráfica los valores de las siluetas media de cada prueba para comprobar que número de clústers es el mejor
+
+```{r message= FALSE, warning=FALSE}
+plot(2:10,resultados[2:10],type="o",col="blue",pch=0,xlab="Número de clusters",ylab="Silueta")
+```
+Interpretando la gráfica anterior, el mejor valor que se obtiene es k=2. Aunque las clases definidas en el artículo mencionado anteriormente son 6 (k=6) y en el dataset original existen 7 (k=7) clases.
+
+Otro forma de evaluar cual es el mejor número de clústers es considerar el mejor modelo, aquel que ofrece la menor suma de los cuadrados de las distancias de los puntos de cada grupo con respecto a su centro (withinss), con la mayor separación entre centros de grupos (betweenss). Como se puede comprobar es una idea conceptualmente similar a la silueta. Una manera común de hacer la selección del número de clústers consiste en aplicar el método elbow (codo), que no es más que la selección del número de clústers en base a la inspección de la gráfica que se obtiene al iterar con el mismo conjunto de datos para distintos valores del número de clústers. Se seleccionará el valor que se encuentra en el "codo" de la curva
+
+```{r message= FALSE, warning=FALSE}
+resultados <- rep(0, 10)
+for (i in c(2,3,4,5,6,7,8,9,10))
+{
+  fit           <- kmeans(data, i)
+  resultados[i] <- fit$tot.withinss
+}
+plot(2:10,resultados[2:10],type="o",col="blue",pch=0,xlab="Número de clusters",ylab="tot.tot.withinss")
+```
+
+En este caso el número óptimo de clústers son 4 que es cuando la curva comienza a estabilizarse.
+
+También se puede usar la función kmeansruns del paquete fpc que ejecuta el algoritmo kmeans con un conjunto de valores, para después seleccionar el valor del número de clústers que mejor funcione de acuerdo a dos criterios: la silueta media ("asw") y Calinski-Harabasz ("ch").
+
+```{r message= FALSE, warning=FALSE}
+library(fpc)
+fit_ch  <- kmeansruns(data, krange = 1:10, criterion = "ch") 
+fit_asw <- kmeansruns(data, krange = 1:10, criterion = "asw") 
+```
+
+Podemos comprobar el valor con el que se ha obtenido el mejor resultado y también mostrar el resultado obtenido para todos los valores de k usando ambos criterios
+
+```{r message= FALSE, warning=FALSE}
+fit_ch$bestk
+fit_asw$bestk
+
+plot(1:10,fit_ch$crit,type="o",col="blue",pch=0,xlab="Número de clústers",ylab="Criterio Calinski-Harabasz")
+plot(1:10,fit_asw$crit,type="o",col="blue",pch=0,xlab="Número de clústers",ylab="Criterio silueta media")
+
+```
+
+$\color{red}{\text{25% Se prueban con diferentes valores de k}}$
+
+Los resultados obtenidos son muy diferentes. Para el caso de las siluetas medias obtuvimos 2 y luego con el método elbow (codo) obtuvimos 4. Finalmente usando la función kmeansruns y aplicando los criterios Calinski-Harabasz y silueta media, se obtiene 7 y 2, respectivamente. Notamos que el valor k=2 coincide con el obtenido inicialmente. 
+
+Como sabemos de antemano en el dataset original existen 7 clases, que coinciden con el valor bestk=7 obtenido para el criterio Calinski-Harabasz. Ahora vamos a analizar los datos de manera visual, comparandolos de 2 en 2, con el valor real que sabemos está almacenado en el campo "NObeyesdad" del dataset original.
+
+
+Vamos a analizar primero con el valor de k=2, para el par de atributos Age (Edad) y Height (Altura):
+
+```{r message= FALSE, warning=FALSE}
+obesity2clusters <- kmeans(data, 2)
+
+# Edad y Altura
+plot(data[c(1,2)], col=obesity2clusters$cluster)
+```
+
+Este valor de k=2 no ayuda a definir correctamente los grupos, ya que están muy dispersos y entremezclados.
+
+
+Ahora vamos a analizar con el otro valor de k=4 que se obtuvo. Graficando Age (Edad) vs. Height (Altura), se obtiene:
+
+
+```{r message= FALSE, warning=FALSE}
+obesity4clusters <- kmeans(data, 4)
+
+# Edad y Altura
+plot(data[c(1,2)], col=obesity4clusters$cluster)
+```
+
+Este valor de k=4 al igual que el valor de k=2 no ayuda a definir correctamente los grupos, ya que vemos que se entremezclan demasiado los objetos evaluados.
+
+
+Ahora vamos a analizar con el valor de k=7, para el par de atributos Age (Edad) vs. Height (Altura):
+
+```{r message= FALSE, warning=FALSE}
+obesity7clusters <- kmeans(data, 7)
+
+# Height y mass_body_idx
+plot(data[c(1,2)], col=obesity7clusters$cluster)
+plot(data[c(1,2)], col=as.factor(obesity_data_all$NObeyesdad))
+```
+Vemos que a medida que se aumenta el valor de k se entremezclan más los grupos, por tal motivo no es una buena elección haber elegido la edad y la altura como variables para agrupar. Es razonable, ya que la altura depende de muchos factores, entre ellos la edad, pero será necesario analizarlo con otros atributos de los individuos.
+
+
+Ahora procedamos a analizar los clusters Weight (Peso) vs. mass_body_idx (índice de masa corporal) y los mismos valores de k.
+
+Para k=2:
+
+```{r message= FALSE, warning=FALSE}
+# Weight y mass_body_idx
+obesity2WMclust <- kmeans(data, 2)
+
+plot(data[c(3,4)], col=obesity2WMclust$cluster)
+```
+Vemos que para el análisis entre el peso y el índice de masa corporal, para el valor de k=2, se obtiene 2 grupos claramente definidos. Sabemos que el índice de masa corporal es un atributo calculado en base al peso, es decir que existe una relación entre los 2 valores.
+
+Además podemos comprobar que el valor de k=2, obtenido mediante silueta media efectivamente refleja una estimación de calidad alta.
+
+Ahora para k=4:
+
+```{r message= FALSE, warning=FALSE}
+# Weight y mass_body_idx
+obesity4WMclust <- kmeans(data, 4)
+
+plot(data[c(3,4)], col=obesity4WMclust$cluster)
+```
+
+Vemos que para el análisis entre el peso y el índice de masa corporal, para el valor de k=4, se obtiene 4 grupos claramente definidos al igual que para k=2.
+
+Los centros de cada cluster se obtiene para su análisis posterior:
+
+```{r message= FALSE, warning=FALSE}
+# Weight y mass_body_idx
+obesity4WMclust$centers
+```
+Los puntos del centro en el cluster son:
+
+* Grupo 1: [51.30, 18.67]
+* Grupo 2: [69.49, 25.15]
+* Grupo 3: [86.28, 29.72]
+* Grupo 4: [117.35, 38.76]
+
+
+Ahora para k=7:
+
+```{r message= FALSE, warning=FALSE}
+# Weight y mass_body_idx
+obesity7WMclust <- kmeans(data, 7)
+
+plot(data[c(3,4)], col=obesity7WMclust$cluster)
+
+```
+Analizamos también los centros de cada cluster
+
+
+```{r message= FALSE, warning=FALSE}
+# Weight y mass_body_idx
+obesity7WMclust$centers
+```
+
+
+Para este valor de k=7 los grupos no están claramente definidos como para los otros valores de k. Los grupos que se encuentran entremezclados son los que tienen por centros:
+
+* Centro 1(Grupo 7): [83.84, 28.52]
+* Centro 2(Grupo 8): [81.07, 29.42]
+
+Lo comparamos con el valor real que sabemos está almacenado en el campo "NObeyesdad" del dataset original.
+
+```{r message= FALSE, warning=FALSE}
+plot(data[c(3,4)], col=as.factor(obesity_data_all$NObeyesdad))
+```
+$\color{red}{\text{10% Se obtiene una medida de lo bueno que es el agrupamiento}}$ 
+
+Ahora vamos a evaluar la calidad del proceso de agregación. Para ello usaremos la función silhouette que calcula la silueta de cada muestra. Para los valores de k=2, k=4 y k=7 obtenemos que:
+
+```{r message= FALSE, warning=FALSE}
+d  <- daisy(data) 
+sk2 <- silhouette(obesity2WMclust$cluster, d)
+sk4 <- silhouette(obesity4WMclust$cluster, d)
+sk7 <- silhouette(obesity7WMclust$cluster, d)
+```
+
+La función silhouette devuelve para cada muestra, el clúster dónde ha sido asignado, el clúster vecino y el valor de la silueta. Por lo tanto, calculando la media de la tercera columna podemos obtener una estimación de la calidad del agrupamiento
+
+```{r message= FALSE, warning=FALSE}
+mean(sk2[,3])
+mean(sk4[,3])
+mean(sk7[,3])
+```
+
+Según los valores obtenidos previamente, sobre la calidad del clustering para cada valor de k, tenemos que agrupar los valores en 2 clusters es mejor que en 4 y/o 8.
+
+
+Sin embargo, es necesario recordar lo mencionado al inicio de este ejercicio.
+
+
+$\color{red}{\text{10% Se ponen nombres a los clústers}}$
+$\color{red}{\text{20% Se describen e interpretan los diferentes clústers obtenidos}}$
+
+Si tomamos como referencia que el IMC óptimo agrupa a los individuos en al menos 3 grupos, no podemos entonces considerar el valor de k=2 como definitivo. Por lo cual lo descartamos. Sin embargo, luego de considerar los valores k=4 y k=7 de manera gráfica y su respectiva medida de calidad del agrupamiento, se concluye que es mejor asociar los individuos en 4 clusters, los cuales serían:
+ 
+ - Grupo 1: Peso Bajo, donde el valor del centro en el cluster para el espacio Peso vs. IMC es [51.30, 18.67]. Es decir que los individuos que tiene un IMC entre 18.67 y 25.15 se corresponden a este grupo.
+ - Grupo 2: Peso Normal, donde el valor del centro en el cluster para el espacio Peso vs. IMC es [69.49, 25.15]. Es decir que los individuos que tiene un IMC entre 25.15 y 29.72 se corresponden a este grupo.
+ - Grupo 3: Peso Alto, donde el valor del centro en el cluster para el espacio Peso vs. IMC es [86.28, 29.72]. Es decir que los individuos que tiene un IMC entre 29.72 y 38.76 se corresponden a este grupo.
+ - Grupo 4: Peso muy Alto donde el valor del centro en el cluster para el espacio Peso vs. IMC es [117.35, 38.76]. Es decir que los individuos que tiene un IMC superior a 38.76 se corresponden a este grupo.
+ 
+Esto nos ayuda a entender cómo están formados los grupos y a referirnos a ellos en análisis posteriores.
+
+> **NOTA**: Las clases del dataset original eran 7, las cuales se obtuvieron analizando más variables relacionadas con los hábitos alimenticios y condición física de cada individuo, aplicando otras técnicas de clasificación que no corresponden al alcance de este ejercicio ni al objetivo de esta PEC.
+
+
+$\color{red}{\text{10% Se presenta el código y es fácilmente reproducible}}$
+
+
+## Ejercicio 1.2
+
+Buscar información sobre otros métodos de agregación diferentes al Kmeans. Partiendo del ejercicio anterior probar el funcionamiento de al menos 2 métodos diferentes y comparar los resultados obtenidos.
+
+### Respuesta 1.2
+
+$\color{red}{\text{25% Se prueba un algoritmo diferente al kmeans}}$
+
+
+#### Clustering Jerárquico aglomerativo.
+
+
+El primero método seleccionado es el método Agglomerative Hierarchical Clustering que agrupa los individuos en base a su distancia en el cluster con sus vecinos. Esto inicia en la base del árbol (dendograma), donde cada observación forma un cluster individual. Los clusters se van combinado a medida que la estructura crece hasta converger en una única “rama” central.
+
+
+```{r message=FALSE, warning=FALSE}
+
+data_scaled <- scale(data)
+
+# Matriz de distancias euclídeas
+mat_dist <- dist(x = data_scaled, method = "euclidean")
+
+# Dendrogramas con linkage complete y average
+hc_euclidea_complete <- hclust(d = mat_dist, method = "complete")
+# Dendrogramas con linkage average
+hc_euclidea_average  <- hclust(d = mat_dist, method = "average")
+# Dendrogramas con linkage ward
+hc_euclidea_ward  <- hclust(d = mat_dist, method = "ward.D")
+
+cor(x = mat_dist, cophenetic(hc_euclidea_complete))
+
+cor(x = mat_dist, cophenetic(hc_euclidea_average))
+
+cor(x = mat_dist, cophenetic(hc_euclidea_ward))
+
+```
+
+Vemos que al momento de evaluar las distancias originales entre observaciones usando el coeficiente de correlación cophenetic, obtenemos que el mejor método es **"average"** con un valor de 0.64. Entre más se acerca el valor a 1, mejor refleja el dendrograma la verdadera similitud entre las observaciones
+
+Ahora vamos a evaluar su dendograma.
+
+##### Dendograma de clusters.
+
+Primero procedamos a graficarlo para poder determinar el número de clusters que se podrían podrían obtener. Cabe recalcar que en este método no se requiere establecer de antemano el número de cluster. En esta ocasión la gráfica puede ayudarnos a determinar k. 
+
+Usaremos además método average para obtener la distancia euclidea entre los individuos a analizarse.
+
+```{r message=FALSE, warning=FALSE}
+
+# El método average intenta minimizar la varianza del grupo
+dendrogram = hclust(d = dist(data_scaled, method = 'euclidean'), method = 'average')
+plot(dendrogram,
+     main = paste('Dendrogram'),
+     xlab = 'Individuos',
+     ylab = 'Distancias euclideanas')
+
+
+```
+
+Analizando el dendograma, si quiero tener 4 clusters al igual que el valor de k para el método k-means, la altura de corte es aproximadamente en 2.5. Cabe recalcar que la línea de corte tiene funcion similar al valor de k en el método k-means, es decir controla el número de clusters obtenidos.
+
+Probamos para 4 clusters (k) y altura (yintercept) de 2.5:
+
+```{r message=FALSE, warning=FALSE}
+library(factoextra)
+
+set.seed(101)
+
+hc_euclidea_average <- hclust(d = dist(x = data_scaled, method = "euclidean"), method = "average")
+
+fviz_dend(x = hc_euclidea_average, k = 4, cex = 0.6) + geom_hline(yintercept = 2.5, linetype = "dashed") + labs(title = "Herarchical clustering", subtitle = "Distancia euclídea, Linkage Average, K=4")
+
+```
+Como se puede ver en la gráfica la linea en 2.5 corta al dendograma en 4 puntos, para establecer los 4 clusters.
+
+
+$\color{red}{\text{25% Se prueba otro algoritmo diferente al kmeans}}$
+
+#### K-medoids clustering (PAM)
+
+K-medoids es un método de clustering muy similar a K-means en cuanto a que ambos agrupan las observaciones en k clusters, donde K es un valor preestablecido por el analista. La diferencia es que, en K-medoids, cada cluster está representado por una observación presente en el cluster (medoid), mientras que en K-means cada cluster está representado por su centroide, que se corresponde con el promedio de todas las observaciones del cluster pero con ninguna en particular.
+
+Comenzamos a realizar el análisis de los datos usando este método. Vamos a usar la técnica del codo, para obtener el valor aproximado de K según la curva de la gráfica. Para esto vamos a usar la función fviz_nbclust del paquete factoextra. Esta función recibe como un parámetro a FUNcluster que será el que haga las particiones de los objetos analizados para identificar los clusters, según el algoritmo PAM.
+
+```{r message= FALSE, warning=FALSE}
+library(cluster)
+library(factoextra)
+
+data_medoids <- scale(data)
+
+fviz_nbclust(x = data_medoids, FUNcluster = pam, method = "wss", k.max = 15,
+             diss = dist(data_medoids, method = "manhattan"))
+
+```
+Vemos que la curva comienza a estabilizarse en entre los valores de 4 y 5. 
+
+Ahora vamos a probar con otro enfoque más elaborado para tener otra perspectiva. Este enfoque no usa la función fviz_nbclust. En esta función se aplica el algoritmo PAM para obtener la suma total de las diferencias internas. 
+
+> **NOTA**: Este fragmento de código fue tomado del portal https://www.cienciadedatos.net [2]
+
+```{r message= FALSE, warning=FALSE}
+
+library(purrr)
+library(ggplot2)
+
+# Mismo análisis pero sin recurrir a factoextra
+# ==============================================================================
+calcular_suma_dif_interna <- function(n_clusters, datos, distancia = "manhattan"){
+  # Esta función aplica el algoritmo pam y devuelve la suma total de las
+  # diferencias internas
+  cluster_pam <- cluster::pam(x = datos, k = n_clusters, metric = distancia)
+  # El objeto pam almacena la suma de las diferencias respecto a los medoides en
+  # $objective["swap"]
+  return(cluster_pam$objective["swap"])
+}
+
+# Se aplica esta función con para diferentes valores de k
+suma_dif_interna <- map_dbl(.x = 1:15,
+                            .f = calcular_suma_dif_interna,
+                            datos = data_medoids)
+data.frame(n_clusters = 1:15, suma_dif_interna = suma_dif_interna) %>%
+  ggplot(aes(x = n_clusters, y = suma_dif_interna)) +
+    geom_line() +
+    geom_point() +
+    scale_x_continuous(breaks = 1:15) +
+    labs(title = "Evolución de la suma total de diferencias intra-cluster") +
+    theme_bw()
+
+```
+Vemos que los valores donde la curva se comienza a estabilizar son nuevamente entre 4 y 5.
+
+$\color{red}{\text{40% Se comparan los resultados del kmeans y los otros dos métodos probados en este ejercicio}}$
+
+
+1. Agrupamiento jerárquico
+
+Para el otro método seleccionado, **Agrupamiento jerárquico** tenemos que es un método de la categoría aglomerador o incrementa. Se diferencia de k-means porque al aplicar el algoritmo de dicho método se obtiene un árbol o dendograma, donde no se tiene ningún valor de k fijado de antemanos, sino que se establece a partir de la gráfica. 
+
+El agrupamiento jerárquico busca cuantificar la similitud entre dos clusters. Además interviene un nuevo concepto de enlace (linkage) que partiendo de clusters individuales se van agrupando en nuevos clusters al evaluar las distancias entre grupos (u objetos, en el primer paso), y creando los nuevos diferentes grupos finales por aglomeración.
+
+Se obtuvo que el mejor linkage era "average", usando el coeficiente de correlación cophenetic. Ya cuando se trazó el dendograma se procedió a inspeccionar que es posible obtener 4 clusters al cortar el dendrogama a una altura de 2.5
+
+A manera de comparación con k-means es su alto consumo de recursos del CPU para realizar los calculos y trazo del dendograma. Llegó a tardar más de un minuto la obtención del dendrograma y la linea de corte. 
+
+Otro punto en contra de este método es que visualmente el dendrograma no es de la mejor calidad, debido al elevado número de hojas iniciales en el árbol. Si el dataset tuviera menos registros se obtendría un dendograma más claro.
+
+2. Método k-medoids (PAM)
+
+Para el método **k-medoids** se obtuvo los mismos resultados para k, ya que para ambos métodos es aplicable la técnica del codo, para lo cual en la gráfica que se corresponde con cada uno la curva comienza a estabilizarse al llegar al valor 4. Aunque para el método k-medoids la curva está mejor definida en comparación con la curva para k-means. 
+
+Cabe recalcar que se pudo notar que el método k-medoids requiere de muchos más recursos para realizar los calculos al momento de aplicar el algoitmo PAM. Por otro lado, la ligera rápidez ganada por k-means, el método k-medoid lo compensa siendo un método mucho más robusto, siendo particularmente recomendable para casos, como el dataset analizado, donde existen muchos o outliers o valores aislados.
+
+
+$\color{red}{\text{10% Se presenta el código y es fácilmente reproducible}}$
+
+******
+# Ejemplo 2
+## Métodos de asociación
+******
+En este ejemplo vamos trabajar el algoritmo "apriori" para obtener reglas de asociación a partir de un data set Dichas reglas nos ayudarán a comprender cómo la información del data set se relaciona entre si.
+Para dicho objetivo vamos a trabajar el dataset de Groceries, que ya viene incluido con las librerías de arules.
+```{r message= FALSE, warning=FALSE}
+# install.packages("arules")
+library(arules)
+data("Groceries")
+```
+Inspeccionamos el dataset y vemos que tiene un listado de elementos que fueron comprados juntos. Vamos a analizarlo un poco visualmente.
+```{r message= FALSE, warning=FALSE}
+?Groceries
+inspect(head(Groceries, 5))
+```
+En el siguiente plot podemos ver que los tres elementos más vendidos son la leche entera, otras verduras y bollería. Dada la simplicidad del Dataset no se pueden hacer mucho más análisis. Pero para datasets más complejos miraríamos la frecuencia y distribución de todos los campos, en busca de posibles errores.
+```{r message= FALSE, warning=FALSE}
+itemFrequencyPlot(Groceries,topN=20,type="absolute")
+```
+Si lanzamos el algoritmo "apriori", generaremos directamente un set de reglas con diferente soporte, confianza y lift. El soporte indica cuantas veces se han encontrado las reglas {lsh => rhs} en el dataset, cuanto más alto mejor. La confianza habla de la probabilidad de que {rhs} se de en función de {lhs}. Y el lift es un parámetro que nos indica cuánto de aleatoriedad hay en las reglas. Un lift de 1 o menos es que las reglas son completamente fruto del azar.
+```{r message= FALSE, warning=FALSE}
+grocery_rules <- apriori(Groceries, parameter = list(support = 0.01, confidence = 0.5))
+
+inspect(head(sort(grocery_rules, by = "confidence"), 3))
+```
+Podemos probar a ordenar las reglas por los diferentes parámetros, para ver que información podemos obtener.
+```{r message= FALSE, warning=FALSE}
+inspect(head(sort(grocery_rules, by = "support"), 3))
+```
+ordenando por support vemos que, con un lift de 2 y una confianza del 51%, podemos decir que la gente que en la misma compra hacía verduras y yogurt, compraban también leche entera. Hay que tener en cuenta que la leche entera es por otro lado el elemento más vendido de la tienda.
+```{r message= FALSE, warning=FALSE}
+inspect(head(sort(grocery_rules, by = "lift"), 3))
+```
+Por otro lado, si ordenamos por lift, vemos que con un soporte del 1% y una confianza del 58%, la gente que compra cítricos y tubérculos compra también verduras
+
+Esta información nos puede ayudar a dar consejos a la dirección de la disposición de los elementos en la tienda o de que productos poner en oferta según lo que se ha comprado. Y si tuviéramos más información podríamos hacer análisis más profundos y ver que clientes compran exactamente qué.
+
+## Ejercicio 2.1:  
+En este ejercicio seguiréis los pasos del ciclo de vida de un proyecto de minería de datos para el caso de un algoritmo de generación de reglas de asociación. Lo haréis con el fichero Lastfm.csv que encontraréis adjunto. Este fichero contiene un conjunto de registros. Estos registros son el histórico de las canciones que ha escuchado un usuario (user) en un portal Web de música. "artist" es el nombre del grupo que ha escuchado, sex y country corresponden a variables que describen al usuario.
+
+### Respuesta 2.1:
+
+$\color{red}{\text{10% Se realiza un resumen de los datos incluidos en la base de datos}}$
+
+Este ejercicio consiste en extraer las reglas de asociación en los datos contenidos en el dataset lastfm.csv. El alcance solo será extraer estar reglas respecto al campo artist. Pero antes vamos a cargar el dataset y resumir la información contenida en el archivo.
+
+```{r message= FALSE, warning=FALSE}
+
+library(arules)
+library(dplyr)
+library(plyr)
+
+#Leemos el archivo CSV original
+historico_artist <- read.csv("lastfm.csv", sep=",", encoding = "UTF-8", stringsAsFactors = TRUE)
+
+summary(historico_artist)
+
+```
+El archivo contiene 4 atributos: user, artist, sex y country. Para efectos del ejercicio solo vamos a trabajar con las variables user y artist con las cuales formaremos las reglas de asociación. 
+
+Primero, vamos a proceder a preparar los datos
+
+$\color{red}{\text{15% Se preparan los datos de forma correcta}}$
+
+```{r message= FALSE, warning=FALSE}
+
+# Creamos un array con los atributos user y artist, para poder agruparlos
+array_user_artist <- historico_artist[, 1:2]
+
+str(array_user_artist)
+
+# Procedemos a transformar en formato transacciones
+lista_artist <- ddply(array_user_artist, c("user"), function(df1)paste(df1$artist, collapse = ","))
+
+# Eliminamos la columna user, por ya no ser necesaria
+lista_artist$user <- NULL
+
+# Dividimos la cadena en elementos. Aplicamos parametros para caracteres especiales
+items <- strsplit(as.character(lista_artist$V1), ",", perl = TRUE, useBytes = FALSE)
+
+# Obtenemos las transacciones
+transacciones <- as(items, "transactions")
+
+#Inspeccionamos las transacciones
+inspect(head(transacciones, 5))
+```
+
+En el siguiente plot podemos ver que los 20 artistas más escuchados por los usuarios que intervienen en el dataset original son:
+
+```{r message= FALSE, warning=FALSE}
+itemFrequencyPlot(transacciones, topN=20, type="absolute")
+```
+
+
+Ya se tiene una lista de transacciones en base a los artistas. Ahora procedamos a aplicar el algoritmo de reglas de asociación. Para ello vamos a usar la función apriori de la librería **arules**
+
+$\color{red}{\text{10% Se aplica el algoritmo de reglas de asociación}}$
+$\color{red}{\text{20% Se realizan diferentes pruebas variando algunos parámetros}}$
+
+Para iniciar este punto de la rúbrica es necesario recordar que: 
+
+> NOTA: Para considerar una regla interesante, debe ser lo suficientemente frecuente y fuerte (esto es, tener bastante soporte y confianza).
+
+> NOTA: El soporte indica cuantas veces se han encontrado las reglas {lsh => rhs} en el dataset, cuanto más alto mejor. La confianza habla de la probabilidad de que {rhs} se de en función de {lhs}. 
+
+
+Vamos a pruebas realizar una primera prueba general 
+
+Realizamos la primera prueba para un valor de soporte de 0.01 y confianza de 0.5
+
+```{r message= FALSE, warning=FALSE}
+
+# Obtenemos las reglas
+reglas <- apriori(transacciones,  parameter = list(supp = 0.01, conf = 0.50))
+
+# Ordenamos las reglas por su confianza
+reglas <- sort(reglas, by="confidence", decreasing=TRUE)
+
+# Vemos la estructura de las reglas
+str(reglas)
+
+# Desplegamos las reglas en la pantalla
+inspect(reglas)
+
+# Revisamos si existen reglas duplicadas
+duplicated(reglas)
+
+# Verificamos si hay reglas redundantes
+reglas_redundantes <- is.redundant(reglas) 
+
+```
+
+Encontramos que para estos valores de confianza y soporte hay 50 reglas de asociación. No hay reglas duplicadas ni redundantes para estas reglas obtenidas.
+
+Vamos a ordenarlas ahora por su valor de soporte, de mayor a menor, para conocer cuales reglas superan el valor de soporte mínimo (*min_sop*) y puedan considerarse **grandes grupos** y sean consideras para la siguiente prueba.
+
+```{r message= FALSE, warning=FALSE}
+
+# Ordenamos las reglas por su valor de soporte
+reglas <- sort(reglas, by="support", decreasing=TRUE)
+
+# Vemos la estructura de las reglas
+str(reglas)
+
+# Desplegamos las reglas en la pantalla
+inspect(reglas)
+
+```
+
+Al redondear los valores de confianza a 3 decimales, se obtiene que 39 reglas sobrepasan el valor de soporte mínimo (*min_sop*) de confianza. 
+
+Ahora vamos a realizar una segunda prueba, para un valor de soporte de 0.011 y confianza de 0.55
+
+```{r message= FALSE, warning=FALSE}
+
+# Obtenemos las reglas
+reglas <- apriori(transacciones,  parameter = list(supp = 0.011, conf = 0.55))
+
+# Ordenamos las reglas por su valor de soporte
+reglas <- sort(reglas, by="support", decreasing=TRUE)
+
+# Vemos la estructura de las reglas
+str(reglas)
+
+# Desplegamos las reglas en la pantalla
+inspect(reglas)
+
+```
+
+$\color{red}{\text{35% Se explican las conclusiones que se obtienen}}$
+
+Finalmente, se obtienen 9 reglas, que nos permite concluir que:
+
+* Entre los usuarios que escuchan a **keane** hay un 63% de probabilidad que también escuchen a **coldplay**. Su valor de soporte de 0.022 es el mayor valor entre las demás. Respecto a esta regla también podemos decir que **coldplay** está en el 3er lugar entre los artistas más escuchados.
+
+* Entre los usuarios que escuchan a **bob dylan** y **radiohead** hay un 57% de probabilidad que también escuchen a **the beatles**. Esta regla aparece en el dataset en 208 ocasiones, con un valor de lift de 3.22.
+
+* Si escuchas a **travis** hay un 56% de probabilidad que también escuches a **coldplay**.
+
+* Si escuchas a **beck** y **the beatles** hay un 59% de probabilidad que también escuches a **radiohead**.
+
+* Si escuchas a **oasis** y **radiohead** hay un 58% de probabilidad que también escuches a **coldplay**.
+
+* Si escuchas a **coldplay** y **sigur rós** hay un 58% de probabilidad que también escuches a **radiohead**.
+
+* Entre los usuarios que escuchan a **bob dylan** y **the rolling stones**, hay un 59% de probabilidad que también escuchen a **the beatles**.
+
+* Entre los usuarios que escuchan a **the beatles** y **the smashing pumpkins**, hay un 62% de probabilidad que también escuchen a **radiohead**.
+
+* Si escuchas a **oasis** y **the killers** hay un 66% de probabilidad que también escuches a **coldplay**.
+
+* Al analizar las reglas 2 y 7, encontramos que entre los usuarios que escuchan a **bod dylan** también existe la probabilidad que escuchen a **the beatles**.
+
+* También se puede decir que **coldplay** aparece como rhs (consecuente) en la mayoría de reglas, es decir, que si estás entre los usuarios que escuchan a keane, travis, oasis, radiohead o the killers es muy probable que también escuches a coldplay.
+
+* Entre los usuarios que escuchan a **radiohead** hay una probabilidad que también escuchen a artistas como **beck**, **the beatles**, **coldplay**, **sigur rós**, **the smalling pumpkins.**
+
+
+$\color{red}{\text{10% Se presenta el código y es fácilmente reproducible}}$
+
+
+******
+# Bibliografía
+
+[1] Dataset for estimation of obesity levels based on eating habits and physical condition in individuals from Colombia, Peru and Mexico. Alojado en https://doi.org/10.1016/j.dib.2019.104344
+
+[2] Clustering y heatmaps: aprendizaje no supervisado. Alojado en https://www.cienciadedatos.net/documentos/37_clustering_y_heatmaps#K-medoids_clustering_(PAM)
+
+[3] Algoritmo Apriori, https://rociochavezml.com/algoritmo-apriori-en-r/, Rocio Chavez
+
+******
+
+
+
+
+
+******
+# Rúbrica
+******
+
+## Ejercicio 1.1
+
+* 15%. Se explican los campos de la base de datos, preparación y análisis de datos
+* 10%. Se aplica el algoritmo de agrupamiento de forma correcta.
+* 25%. Se prueban con diferentes valores de k.
+* 10%. Se obtiene una medida de lo bueno que es el agrupamiento.
+* 10%. Se ponen nombres a las asociaciones.
+* 20%. Se describen e interpretan los diferentes clústers obtenidos.
+* 10%. Se presenta el código y es fácilmente reproducible.
+
+## Ejercicio 1.2
+
+* 25%. Se prueba un algoritmo diferente al kmeans.
+* 25%. Se prueba otro algoritmo diferente al kmeans.
+* 40%. Se comparan los resultados del kmeans y los otros dos métodos probados en este ejercicio.
+* 10%. Se presenta el código y es fácilmente reproducible.
+
+## Ejercicio 2.1
+
+* 10%. Se realiza un resumen de los datos incluidos en la base de datos.
+* 15%. Se preparan los datos de forma correcta.
+* 10%. Se aplica el algoritmo de reglas de asociación.
+* 20%. Se realizan diferentes pruebas variando algunos parámetros.
+* 35%. Se explican las conclusiones que se obtienen.
+* 10%. Se presenta el código y es fácilmente reproducible.

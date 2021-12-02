@@ -1,4 +1,4 @@
-# data-mining (2020-2021 | UOC)
+# data-mining using R
 
 Este repositorio contiene los enunciados y soluciones de cada actividad propuesta para aprobar la asignatura Minería de Datos de la Maestría en Ciencia de Datos de la [Universitat Oberta de Catalunya](https://www.uoc.edu/portal/es/index.html) (UOC) del periodo septiembre 2020 - enero 2021. 
 
@@ -10,7 +10,7 @@ En cada carpeta hay 2 directorios:
 
 Un breve resumen de lo que trata cada actividad es: 
 
-## PEC 1
+## Actividad 1
 
 En esta actividad se tiene un ejercicio teórico y uno práctico. Para el ejercicio práctico la rúbrica de evaluación es: 
 
@@ -23,8 +23,10 @@ En esta actividad se tiene un ejercicio teórico y uno práctico. Para el ejerci
 - Se trata en profundidad algún otro aspecto respecto a los datos presentado en el módulo 2 
 - Se ha buscado información adicional, se ha incluido en el documento de respuesta y las fuentes se han citado correctamente 
 
+> La solución a la Actividad 1 está en el siguiente [archivo](https://github.com/gpbonillas/data-mining/blob/main/PEC%201/Solucion/gbonillas-PEC1.Rmd)
 
-## PEC 2
+
+## Actividad 2
 
 Para esta actividad la rúbrica de evaluación es:
 
@@ -51,7 +53,9 @@ Para esta actividad la rúbrica de evaluación es:
 - Se explican las conclusiones que se obtienen.
 - Se presenta el código y es fácilmente reproducible.
 
-## PEC 3
+> La solución a la Actividad 2 está en el siguiente [archivo](https://github.com/gpbonillas/data-mining/blob/main/PEC%202/Solucion/gbonillas-PEC2.Rmd)
+
+## Actividad 3
 
 Para esta actividad la rúbrica de evaluación es la siguiente: 
 
@@ -65,7 +69,9 @@ Para esta actividad la rúbrica de evaluación es la siguiente:
 - Se presenta el código y es fácilmente reproducible.
 - Se presenta unas conclusiones donde se expone el conocimiento adquirido tras el trabajo realizado.
 
-## PRA 1
+> La solución a la Actividad 3 está en el siguiente [archivo](https://github.com/gpbonillas/data-mining/blob/main/PEC%203/Solucion/gbonillas-PEC3.Rmd)
+
+## Práctica 1
 
 Esta actividad se complementa con la actividad PRA 2, por lo que la rúbrica de evaluación es:
 
@@ -74,7 +80,9 @@ Esta actividad se complementa con la actividad PRA 2, por lo que la rúbrica de 
 - Explicación clara de cualquier tarea de limpieza o acondicionado que se realiza. Justificando el motivo y mencionando las ventajas de la acción tomada.
 - Se realiza un proceso de PCA o SVD donde se aprecia mediante explicaciones y comentarios que el estudiante entiende todos los pasos y se comenta extensamente el resultado final obtenido.
 
-## PRA 2
+> La solución a la Práctica 1 está en el siguiente [archivo](https://github.com/gpbonillas/data-mining/blob/main/PRA%201/Solucion/75.584-PRA1.Rmd)
+
+## Práctica 2
 
 Esta actividad es la continuación de la PRA 1, cuya rúbrica de evaluación es la siguiente: 
 
@@ -85,3 +93,4 @@ Esta actividad es la continuación de la PRA 1, cuya rúbrica de evaluación es 
 - Se genera un modelo supervisado con PCA/SVD previo, se muestran y comentan medidas de calidad del modelo generado y se comenta extensamente el conocimiento extraído del modelo.    
 - Se compara la capacidad predictiva de los dos modelos supervisados y se comenta la diferencia de rendimiento en base al efecto PCA/SVD.  
 
+> La solución a la Práctica 2 está en el siguiente [archivo](https://github.com/gpbonillas/data-mining/blob/main/PRA%202/Solucion/gbonillas-PRA2.Rmd)
